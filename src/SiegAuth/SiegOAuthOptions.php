@@ -25,7 +25,7 @@ final class SiegOAuthOptions
     public string $baseApiUrl = 'https://api.sieg.com/api/v1/oauth/';
 
     /** Nível de acesso padrão (read, write, fullAccess). */
-    public ?string $defaultAccessLevel = null;
+    public ?string $defaultAccessLevel = 'write';
 
     /** Antecedência para auto-refresh (segundos). Padrão: 5 dias — refresh no 25º dia para renovar por mais 30 dias. */
     public int $autoRefreshThresholdSeconds = 432000; // 5 dias (30 - 5 = 25º dia)

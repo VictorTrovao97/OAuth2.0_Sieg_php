@@ -41,7 +41,7 @@ final class SiegIntegrationClient
         if (trim($state) === '') {
             throw new \InvalidArgumentException('state não pode ser vazio.');
         }
-        $level = $accessLevel ?? $this->options->defaultAccessLevel ?? 'read';
+        $level = $accessLevel ?? $this->options->defaultAccessLevel ?? 'write';
         $base = rtrim($this->options->baseAuthorizeUrl, '/');
         $params = http_build_query([
             'clientId' => $this->options->clientId,

@@ -52,7 +52,7 @@ $options = new SiegOAuthOptions([
     'clientId'           => 'SEU_CLIENT_ID',           // Fornecido pela SIEG
     'secretKey'           => 'SUA_SECRET_KEY',          // Fornecida pela SIEG
     'redirectUri'         => 'https://seu-sistema.com/oauth/callback',  // URL de callback configurada na SIEG
-    'defaultAccessLevel'  => 'read',                    // read, write ou fullAccess
+    'defaultAccessLevel'  => 'write',                   // read, write ou fullAccess
 ]);
 
 $httpClient = new Client(['timeout' => 10]);
@@ -67,7 +67,7 @@ $sieg = new SiegIntegrationClient($httpClient, $options, $tokenStore);
 | `clientId` | Sim | Identificador do cliente (SIEG) |
 | `secretKey` | Sim | Chave secreta (SIEG) |
 | `redirectUri` | Sim | URL de callback após autorização |
-| `defaultAccessLevel` | Não | `read`, `write` ou `fullAccess` (padrão: `read`) |
+| `defaultAccessLevel` | Não | `read`, `write` ou `fullAccess` (padrão: `write`) |
 | `baseAuthorizeUrl` | Não | URL da tela de autorização (padrão: SIEG) |
 | `baseApiUrl` | Não | URL base dos endpoints OAuth (padrão: SIEG) |
 | `autoRefreshThresholdSeconds` | Não | Antecedência para renovar o token em segundos (padrão: 5 dias) |
@@ -86,7 +86,7 @@ Gere um `state` e redirecione o usuário para a URL de autorização:
 $state = bin2hex(random_bytes(16));
 // Salve no seu sistema a relação $state -> empresaId (sessão, banco, etc.)
 
-$url = $sieg->getAuthorizationUrl($state, 'read');
+$url = $sieg->getAuthorizationUrl($state, 'write');
 header('Location: ' . $url);
 exit;
 ```
