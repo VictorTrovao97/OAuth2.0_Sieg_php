@@ -7,7 +7,7 @@ Biblioteca PHP para autenticação OAuth 2.0 da SIEG em sistemas emissores de no
 - PHP 8.1+
 - Composer
 - Extensão `json`
-- Guzzle HTTP (instalado via Composer)
+- Módulos PSR nativos: `psr/http-client`, `psr/http-factory`, `psr/log`
 
 ## Instalação
 
@@ -47,17 +47,30 @@ use SiegAuth\SiegOAuthOptions;
 use SiegAuth\SiegIntegrationClient;
 use SiegAuth\InMemorySiegTokenStore;
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\HttpFactory;
 
 $options = new SiegOAuthOptions([
-    'clientId'           => 'SEU_CLIENT_ID',           // Fornecido pela SIEG
-    'secretKey'           => 'SUA_SECRET_KEY',          // Fornecida pela SIEG
-    'redirectUri'         => 'https://seu-sistema.com/oauth/callback',  // URL de callback configurada na SIEG
-    'defaultAccessLevel'  => 'write',                   // read, write ou fullAccess
+    'clientId'           => 'SEU_CLIENT_ID',           
+    'secretKey'          => 'SUA_SECRET_KEY',          
+    'redirectUri'        => 'https://seu-sistema.com/oauth/callback',  
+    'defaultAccessLevel' => 'write',                   
 ]);
 
+// Exemplo usando Guzzle 7 (Totalmente agnóstico com PSR-18 e PSR-17)
 $httpClient = new Client(['timeout' => 10]);
+$httpFactory = new HttpFactory();
+
 $tokenStore = new InMemorySiegTokenStore();
-$sieg = new SiegIntegrationClient($httpClient, $options, $tokenStore);
+$logger = null; // Opcional: Adicione qualquer logger PSR-3 (ex: Monolog)
+
+$sieg = new SiegIntegrationClient(
+    $httpClient, 
+    $httpFactory, // RequestFactory
+    $httpFactory, // StreamFactory
+    $options, 
+    $tokenStore,
+    $logger
+);
 ```
 
 **Opções disponíveis:**
@@ -183,7 +196,13 @@ Uso:
 
 ```php
 $tokenStore = new DbSiegTokenStore($pdo);
-$sieg = new SiegIntegrationClient($httpClient, $options, $tokenStore);
+$sieg = new SiegIntegrationClient(
+    $httpClient, 
+    $httpFactory, // RequestFactory
+    $httpFactory, // StreamFactory
+    $options, 
+    $tokenStore
+);
 ```
 
 ---
