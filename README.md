@@ -4,7 +4,7 @@ Biblioteca PHP para autenticação OAuth 2.0 da SIEG em sistemas emissores de no
 
 ## Requisitos
 
-- PHP 8.1+
+- PHP 7.4+
 - Composer
 - Extensão `json`
 - Módulos PSR nativos: `psr/http-client`, `psr/http-factory`, `psr/log`
@@ -148,7 +148,11 @@ use SiegAuth\SiegTokenStoreInterface;
 
 class DbSiegTokenStore implements SiegTokenStoreInterface
 {
-    public function __construct(private \PDO $pdo) {}
+    private \PDO $pdo;
+
+    public function __construct(\PDO $pdo) {
+        $this->pdo = $pdo;
+    }
 
     public function getToken(string $accountKey): ?SiegToken
     {
