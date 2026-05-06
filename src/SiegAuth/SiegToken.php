@@ -9,13 +9,23 @@ namespace SiegAuth;
  */
 final class SiegToken
 {
+    public string $accessToken;
+    public \DateTimeImmutable $expiresAt;
+    public ?string $refreshToken;
+    /** @var array<string, mixed> */
+    public array $additionalData;
+
     public function __construct(
-        public readonly string $accessToken,
-        public readonly \DateTimeImmutable $expiresAt,
-        public readonly ?string $refreshToken = null,
-        /** @var array<string, mixed> */
-        public readonly array $additionalData = []
+        string $accessToken,
+        \DateTimeImmutable $expiresAt,
+        ?string $refreshToken = null,
+        array $additionalData = []
     ) {
+        $this->accessToken = $accessToken;
+        $this->expiresAt = $expiresAt;
+        $this->refreshToken = $refreshToken;
+        $this->additionalData = $additionalData;
+
         if (trim($accessToken) === '') {
             throw new \InvalidArgumentException('AccessToken não pode ser vazio.');
         }

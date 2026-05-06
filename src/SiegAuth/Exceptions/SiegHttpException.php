@@ -9,12 +9,17 @@ namespace SiegAuth\Exceptions;
  */
 class SiegHttpException extends SiegAuthException
 {
+    public int $statusCode;
+    public ?string $responseBody;
+
     public function __construct(
-        public readonly int $statusCode,
-        public readonly ?string $responseBody,
+        int $statusCode,
+        ?string $responseBody,
         string $message,
         ?\Throwable $previous = null
     ) {
+        $this->statusCode = $statusCode;
+        $this->responseBody = $responseBody;
         parent::__construct($message, 0, $previous);
     }
 }

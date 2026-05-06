@@ -17,14 +17,28 @@ use SiegAuth\Exceptions\SiegHttpException;
  */
 final class SiegIntegrationClient
 {
+    private ClientInterface $httpClient;
+    private RequestFactoryInterface $requestFactory;
+    private StreamFactoryInterface $streamFactory;
+    private SiegOAuthOptions $options;
+    private SiegTokenStoreInterface $tokenStore;
+    private ?LoggerInterface $logger;
+
     public function __construct(
-        private readonly ClientInterface $httpClient,
-        private readonly RequestFactoryInterface $requestFactory,
-        private readonly StreamFactoryInterface $streamFactory,
-        private readonly SiegOAuthOptions $options,
-        private readonly SiegTokenStoreInterface $tokenStore,
-        private readonly ?LoggerInterface $logger = null
+        ClientInterface $httpClient,
+        RequestFactoryInterface $requestFactory,
+        StreamFactoryInterface $streamFactory,
+        SiegOAuthOptions $options,
+        SiegTokenStoreInterface $tokenStore,
+        ?LoggerInterface $logger = null
     ) {
+        $this->httpClient = $httpClient;
+        $this->requestFactory = $requestFactory;
+        $this->streamFactory = $streamFactory;
+        $this->options = $options;
+        $this->tokenStore = $tokenStore;
+        $this->logger = $logger;
+
         if (trim($options->clientId) === '') {
             throw new \InvalidArgumentException('ClientId deve ser configurado em SiegOAuthOptions.');
         }
@@ -49,7 +63,7 @@ final class SiegIntegrationClient
         }
         $level = $accessLevel ?? $this->options->defaultAccessLevel ?? 'write';
 
-        $this->logger?->debug("Montando URL de autorização SIEG com state='{$state}' e accessLevel='{$level}'.");
+        if ($this->logger !== null) $this->logger->debug("Montando URL de autorização SIEG com state='{$state}' e accessLevel='{$level}'.");
 
         $base = rtrim($this->options->baseAuthorizeUrl, '/');
         
@@ -65,7 +79,7 @@ final class SiegIntegrationClient
         $paramsArray['accessLevel'] = $level;
 
         $params = http_build_query($paramsArray);
-        return $base . (str_contains($base, '?') ? '&' : '?') . $params;
+        return $base . (strpos($base, '?') !== false ? '&' : '?') . $params;
     }
 
     /**
@@ -87,7 +101,7 @@ final class SiegIntegrationClient
             throw new \InvalidArgumentException('state não pode ser vazio.');
         }
 
-        $this->logger?->info("Concluindo autorização SIEG para conta '{$accountKey}'.");
+        if ($this->logger !== null) $this->logger->info("Concluindo autorização SIEG para conta '{$accountKey}'.");
 
         $url = rtrim($this->options->baseApiUrl, '/') . '/generate-token';
         $payload = [
@@ -112,7 +126,7 @@ final class SiegIntegrationClient
         );
         $this->tokenStore->saveToken($accountKey, $token);
 
-        $this->logger?->info("Autorização SIEG concluída e token salvo para conta '{$accountKey}'.");
+        if ($this->logger !== null) $this->logger->info("Autorização SIEG concluída e token salvo para conta '{$accountKey}'.");
     }
 
     /**
@@ -137,7 +151,7 @@ final class SiegIntegrationClient
 
         $toleranceSeconds = $this->options->autoRefreshThresholdSeconds;
         if ($token->isExpired(null, $toleranceSeconds)) {
-            $this->logger?->info("Token SIEG para conta '{$accountKey}' próximo de expirar. Iniciando auto-refresh.");
+            if ($this->logger !== null) $this->logger->info("Token SIEG para conta '{$accountKey}' próximo de expirar. Iniciando auto-refresh.");
 
             $this->refreshTokenInternal($token->accessToken);
             $renewed = new SiegToken(
@@ -147,7 +161,7 @@ final class SiegIntegrationClient
             $this->tokenStore->saveToken($accountKey, $renewed);
             $token = $renewed;
 
-            $this->logger?->info("Auto-refresh concluído para conta '{$accountKey}'. Nova expiração: " . $renewed->expiresAt->format(\DateTimeInterface::ATOM) . ".");
+            if ($this->logger !== null) $this->logger->info("Auto-refresh concluído para conta '{$accountKey}'. Nova expiração: " . $renewed->expiresAt->format(\DateTimeInterface::ATOM) . ".");
         }
 
         return $token->accessToken;
@@ -166,11 +180,11 @@ final class SiegIntegrationClient
 
         $token = $this->tokenStore->getToken($accountKey);
         if ($token === null) {
-            $this->logger?->warning("Nenhum token SIEG encontrado para a conta '{$accountKey}' ao tentar revogar.");
+            if ($this->logger !== null) $this->logger->warning("Nenhum token SIEG encontrado para a conta '{$accountKey}' ao tentar revogar.");
             return;
         }
 
-        $this->logger?->info("Revogando token SIEG para conta '{$accountKey}'.");
+        if ($this->logger !== null) $this->logger->info("Revogando token SIEG para conta '{$accountKey}'.");
 
         $url = rtrim($this->options->baseApiUrl, '/') . '/revoke';
         $payload = ['Token' => $token->accessToken];
@@ -185,7 +199,7 @@ final class SiegIntegrationClient
 
         $this->tokenStore->deleteToken($accountKey);
 
-        $this->logger?->info("Token SIEG revogado e removido do armazenamento para conta '{$accountKey}'.");
+        if ($this->logger !== null) $this->logger->info("Token SIEG revogado e removido do armazenamento para conta '{$accountKey}'.");
     }
 
     private function refreshTokenInternal(string $accessToken): void
@@ -208,7 +222,7 @@ final class SiegIntegrationClient
      */
     private function postJson(string $url, array $payload): array
     {
-        $this->logger?->debug("Enviando requisição POST para '{$url}'.");
+        if ($this->logger !== null) $this->logger->debug("Enviando requisição POST para '{$url}'.");
 
         try {
             $jsonString = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -225,7 +239,7 @@ final class SiegIntegrationClient
             $body = (string) $response->getBody();
             
             if ($statusCode < 200 || $statusCode >= 300) {
-                $this->logger?->error("Chamada HTTP para '{$url}' falhou com código {$statusCode}. Corpo: {$body}");
+                if ($this->logger !== null) $this->logger->error("Chamada HTTP para '{$url}' falhou com código {$statusCode}. Corpo: {$body}");
                 throw new SiegHttpException(
                     $statusCode,
                     $body,
@@ -233,21 +247,21 @@ final class SiegIntegrationClient
                 );
             }
         } catch (ClientExceptionInterface $e) {
-            $this->logger?->error("Erro de rede ao chamar '{$url}': " . $e->getMessage());
+            if ($this->logger !== null) $this->logger->error("Erro de rede ao chamar '{$url}': " . $e->getMessage());
             throw new SiegHttpException(0, '', "Chamada HTTP para '{$url}' falhou: " . $e->getMessage(), $e);
         } catch (\JsonException $e) {
-            $this->logger?->error("Erro ao codificar JSON para '{$url}': " . $e->getMessage());
+            if ($this->logger !== null) $this->logger->error("Erro ao codificar JSON para '{$url}': " . $e->getMessage());
             throw new SiegAuthException("Erro ao codificar JSON para '{$url}'.", 0, $e);
         }
 
         try {
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            $this->logger?->error("Erro ao desserializar a resposta JSON de '{$url}': " . $e->getMessage());
+            if ($this->logger !== null) $this->logger->error("Erro ao desserializar a resposta JSON de '{$url}': " . $e->getMessage());
             throw new SiegAuthException("Erro ao desserializar a resposta JSON de '{$url}'.", 0, $e);
         }
         
-        $this->logger?->debug("Resposta HTTP de '{$url}' desserializada com sucesso.");
+        if ($this->logger !== null) $this->logger->debug("Resposta HTTP de '{$url}' desserializada com sucesso.");
 
         return is_array($decoded) ? $decoded : [];
     }
